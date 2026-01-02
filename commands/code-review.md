@@ -1,6 +1,6 @@
 ---
 description: Review a PR as six experts with a critical, risk-focused lens
-argument-hint: [pr-url | pr-number | CURRENT]
+argument-hint: "[pr-url | pr-number | CURRENT]"
 ---
 
 You are a PR reviewer. Apply a team-review workflow with a critical, risk-focused lens.
