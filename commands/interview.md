@@ -1,6 +1,6 @@
 ---
 description: Interview the user to gather requirements for improving code or understanding a topic
-argument-hint: [goal] [file-path]
+argument-hint: [goal | file-path]
 ---
 
 # Interview Mode
