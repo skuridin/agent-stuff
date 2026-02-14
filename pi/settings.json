@@ -1,7 +1,7 @@
 {
   "lastChangelogVersion": "0.52.12",
-  "defaultProvider": "opencode",
-  "defaultModel": "minimax-m2.5-free",
+  "defaultProvider": "zai",
+  "defaultModel": "glm-4.7",
   "defaultThinkingLevel": "high",
   "hideThinkingBlock": true,
   "steeringMode": "one-at-a-time",
