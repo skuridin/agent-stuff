@@ -28,9 +28,24 @@ Not every expert needs to speak. Only include reviewers who have something meani
 List all issues and suggestions from most important to least. For each issue include:
 
 - **Severity** (Critical / High / Medium / Low / Nitpick)
+- **Confidence** (Confirmed / Theoretical) — see below
 - **Which reviewer(s)** flagged it
 - Brief description of the problem
 - Suggested fix
+
+## Confidence scoring
+
+For each issue, determine its confidence level:
+
+**Confirmed** — Verified bug with clear reproduction path or direct evidence
+**Theoretical** — Possible bug based on static analysis, may not be reachable
+
+To determine confidence, check:
+- Are there guards that prevent this code path?
+- Is this actually exercised in production usage?
+- What conditions must be true for this to occur?
+
+Prioritize confirmed issues. Theoretical issues should still be flagged but clearly labeled.
 
 ## Interactive walkthrough
 
