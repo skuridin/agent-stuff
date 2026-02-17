@@ -4,12 +4,12 @@ Review code as a team of 7 experts including a KISS advocate.
 
 Look at `$ARGUMENTS` to decide what to review:
 
-- **No arguments or "pr"** — review the current branch's PR. Use `gh pr view` to find it, then `gh pr diff` for changes.
-- **PR number (e.g. `123`) or URL (e.g. `github.com/.../pull/123`)** — review that specific PR. Use `gh pr view <number>` and `gh pr diff <number>`.
+- **No arguments or "pr"** — review the current branch's PR. Use `gh pr view` to find it, then checkout the PR branch with `gh pr checkout` and use `gh pr diff` for changes.
+- **PR number (e.g. `123`) or URL (e.g. `github.com/.../pull/123`)** — review that specific PR. Checkout the PR branch with `gh pr checkout <number>`, then use `gh pr view <number>` and `gh pr diff <number>`.
 - **File path or component name (e.g. `src/components/Button.tsx`)** — review that file or find it via glob. Read the file and all closely related files (tests, types, parent components) to build context.
 - **Directory or glob (e.g. `apps/frontend/deploy/`)** — review all files matching the pattern.
 
-For PR reviews, fetch the diff and focus on changed lines but flag issues in surrounding context when relevant. For file/component reviews, read the full file and review holistically.
+For PR reviews, always checkout the PR branch first with `gh pr checkout` so you can read the full source files for context — not just the diff. Focus on changed lines but read surrounding code and related files to flag issues in context. For file/component reviews, read the full file and review holistically.
 
 ## Expert panel
 
