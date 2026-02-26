@@ -16,7 +16,16 @@ const execAsync = promisify(exec);
 
 const PACKAGE = "@mariozechner/pi-coding-agent";
 
-type PackageManager = "npm" | "fnm" | "bun" | "yarn" | "pnpm";
+// Package manager path patterns for detection
+const PM_PATH_PATTERNS = {
+	fnm: ["fnm_multishells", ".fnm"],
+	bun: ["bun/install/global", ".bun/install/global"],
+	yarn: [".yarn/global", "yarn/global"],
+	pnpm: [".pnpm-global", "pnpm/global"],
+	npm: ["/lib/node_modules/", "/node_modules/.bin/", "AppData/Roaming/npm", "npm-global"],
+} as const;
+
+type PackageManager = "npm" | "bun" | "yarn" | "pnpm" | "fnm";
 type NotificationLevel = "info" | "warning" | "error" | "success";
 
 interface PackageManagerInfo {
@@ -40,9 +49,18 @@ async function getPiBinaryPath(): Promise<string | null> {
 	try {
 		const isWindows = process.platform === "win32";
 		const whichCmd = isWindows ? "where.exe pi" : "which pi";
-		const { stdout } = await execAsync(whichCmd, { encoding: "utf-8" });
-		return stdout.trim().split("\n")[0] || null;
-	} catch {
+		const { stdout } = await execAsync(whichCmd, {
+			encoding: "utf-8",
+			timeout: 10000,
+		});
+		const trimmed = stdout.trim();
+		if (!trimmed) {
+			return null;
+		}
+		// Take first line if multiple matches
+		return trimmed.split("\n")[0].trim() || null;
+	} catch (err) {
+		console.error("getPiBinaryPath: Failed to find pi:", err);
 		return null;
 	}
 }
@@ -53,7 +71,10 @@ async function getPiBinaryPath(): Promise<string | null> {
 async function getCurrentVersion(): Promise<string> {
 	try {
 		const piBinaryPath = await getPiBinaryPath();
-		if (!piBinaryPath) return "unknown";
+		if (!piBinaryPath) {
+			console.error("getCurrentVersion: Could not find pi binary path");
+			return "unknown";
+		}
 
 		// Resolve symlink if it's a symlink
 		let resolvedPath = piBinaryPath;
@@ -71,10 +92,12 @@ async function getCurrentVersion(): Promise<string> {
 			const content = await fs.readFile(packageJsonPath, "utf-8");
 			const pkgJson = JSON.parse(content);
 			return pkgJson.version;
-		} catch {
+		} catch (err) {
+			console.error("getCurrentVersion: Failed to read/parse package.json:", err);
 			return "unknown";
 		}
-	} catch {
+	} catch (err) {
+		console.error("getCurrentVersion: Unexpected error:", err);
 		return "unknown";
 	}
 }
@@ -88,8 +111,14 @@ async function getLatestVersion(): Promise<string | null> {
 			encoding: "utf-8",
 			timeout: 15000,
 		});
-		return stdout.trim();
-	} catch {
+		const version = stdout.trim();
+		if (!version) {
+			console.error("getLatestVersion: Empty version response from npm");
+			return null;
+		}
+		return version;
+	} catch (err) {
+		console.error("getLatestVersion: Failed to fetch version:", err);
 		return null;
 	}
 }
@@ -102,11 +131,10 @@ async function detectPackageManager(): Promise<PackageManagerInfo | null> {
 		const piBinaryPath = await getPiBinaryPath();
 		if (!piBinaryPath) return null;
 
-		// Normalize path separators for matching
 		const normalizedPath = piBinaryPath.replace(/\\/g, "/");
 
-		// Check for package manager signatures in the path
-		if (normalizedPath.includes(".fnm") || normalizedPath.includes("fnm_multishells")) {
+		// fnm is a Node version manager - global packages use npm
+		if (PM_PATH_PATTERNS.fnm.some((pattern) => normalizedPath.includes(pattern))) {
 			return {
 				name: "fnm",
 				command: "npm",
@@ -114,7 +142,7 @@ async function detectPackageManager(): Promise<PackageManagerInfo | null> {
 			};
 		}
 
-		if (normalizedPath.includes("bun/install/global") || normalizedPath.includes(".bun/install/global")) {
+		if (PM_PATH_PATTERNS.bun.some((pattern) => normalizedPath.includes(pattern))) {
 			return {
 				name: "bun",
 				command: "bun",
@@ -122,7 +150,7 @@ async function detectPackageManager(): Promise<PackageManagerInfo | null> {
 			};
 		}
 
-		if (normalizedPath.includes(".yarn/global") || normalizedPath.includes("yarn/global")) {
+		if (PM_PATH_PATTERNS.yarn.some((pattern) => normalizedPath.includes(pattern))) {
 			return {
 				name: "yarn",
 				command: "yarn",
@@ -130,7 +158,7 @@ async function detectPackageManager(): Promise<PackageManagerInfo | null> {
 			};
 		}
 
-		if (normalizedPath.includes(".pnpm-global") || normalizedPath.includes("pnpm/global")) {
+		if (PM_PATH_PATTERNS.pnpm.some((pattern) => normalizedPath.includes(pattern))) {
 			return {
 				name: "pnpm",
 				command: "pnpm",
@@ -138,13 +166,7 @@ async function detectPackageManager(): Promise<PackageManagerInfo | null> {
 			};
 		}
 
-		// Check for npm - look for standard npm global path patterns
-		if (
-			normalizedPath.includes("/lib/node_modules/") ||
-			normalizedPath.includes("/node_modules/.bin/") ||
-			normalizedPath.includes("AppData/Roaming/npm") ||
-			normalizedPath.includes("npm-global")
-		) {
+		if (PM_PATH_PATTERNS.npm.some((pattern) => normalizedPath.includes(pattern))) {
 			return {
 				name: "npm",
 				command: "npm",
@@ -152,9 +174,9 @@ async function detectPackageManager(): Promise<PackageManagerInfo | null> {
 			};
 		}
 
-		// Unknown package manager
 		return null;
-	} catch {
+	} catch (error) {
+		console.error("detectPackageManager error:", error);
 		return null;
 	}
 }
@@ -166,7 +188,10 @@ async function isCommandAvailable(command: string): Promise<boolean> {
 	try {
 		const isWindows = process.platform === "win32";
 		const checkCmd = isWindows ? `where.exe ${command}` : `which ${command}`;
-		await execAsync(checkCmd, { encoding: "utf-8" });
+		await execAsync(checkCmd, {
+			encoding: "utf-8",
+			timeout: 10000,
+		});
 		return true;
 	} catch {
 		return false;
@@ -176,22 +201,23 @@ async function isCommandAvailable(command: string): Promise<boolean> {
 /**
  * Compare two semver versions
  * Returns true if latest > current
- * Note: Simple comparison, does not handle pre-release versions
  */
 function isNewer(current: string, latest: string): boolean {
-	// Handle non-standard versions
-	if (current === "unknown" || !current.match(/^\d+\.\d+\.\d+/)) {
-		return true; // Assume update needed if we can't determine current version
-	}
-	if (!latest.match(/^\d+\.\d+\.\d+/)) {
-		return false; // Don't update to invalid version
-	}
-
-	const parseVersion = (v: string) => {
+	const parseVersion = (v: string): number[] => {
 		const match = v.match(/^(\d+)\.(\d+)\.(\d+)/);
 		if (!match) return [0, 0, 0];
 		return [parseInt(match[1], 10), parseInt(match[2], 10), parseInt(match[3], 10)];
 	};
+
+	// Handle non-standard current version
+	if (current === "unknown" || !current.match(/^\d+\.\d+\.\d+/)) {
+		return true; // Assume update needed if we can't determine current version
+	}
+
+	// Handle invalid latest version
+	if (!latest || !latest.match(/^\d+\.\d+\.\d+/)) {
+		return false; // Don't update to invalid version
+	}
 
 	const currentParts = parseVersion(current);
 	const latestParts = parseVersion(latest);
@@ -214,6 +240,82 @@ function getManualInstructions(): string {
   bun update -g @mariozechner/pi-coding-agent
   yarn global add @mariozechner/pi-coding-agent@latest
   pnpm update -g @mariozechner/pi-coding-agent@latest`;
+}
+
+/**
+ * Perform the actual update using the detected package manager
+ */
+async function performUpdate(
+	pkgManager: PackageManagerInfo,
+	ctx: UpdateContext
+): Promise<void> {
+	// Step 1: Get versions
+	ctx.ui.setStatus("pi-updater", "Checking for updates...");
+	const [currentVersion, latestVersion] = await Promise.all([
+		getCurrentVersion(),
+		getLatestVersion(),
+	]);
+	ctx.ui.setStatus("pi-updater", undefined);
+
+	if (!latestVersion) {
+		ctx.ui.notify("Failed to fetch latest version. Please check your network connection.", "error");
+		return;
+	}
+
+	// Step 2: Check if update is needed
+	if (!isNewer(currentVersion, latestVersion)) {
+		ctx.ui.notify(`Already on latest version (v${currentVersion})`, "info");
+		return;
+	}
+
+	// Step 3: Confirm update
+	const confirmed = await ctx.ui.confirm(
+		"Update pi?",
+		`Update pi from v${currentVersion} to v${latestVersion}?`
+	);
+
+	if (!confirmed) {
+		ctx.ui.notify("Update cancelled", "info");
+		return;
+	}
+
+	// Step 4: Run update
+	ctx.ui.setStatus("pi-updater", `Updating to v${latestVersion}...`);
+
+	const fullCommand = `${pkgManager.command} ${pkgManager.args.join(" ")}`;
+	try {
+		await execAsync(fullCommand, {
+			encoding: "utf-8",
+			timeout: 120000, // 2 minutes for slow connections
+		});
+
+		// Step 5: Verify update succeeded
+		ctx.ui.setStatus("pi-updater", "Verifying update...");
+		const newVersion = await getCurrentVersion();
+		ctx.ui.setStatus("pi-updater", undefined);
+
+		// Check if update was successful: version matches or is newer than expected
+		const updateSuccess =
+			newVersion !== "unknown" &&
+			(newVersion === latestVersion || isNewer(currentVersion, newVersion));
+
+		if (updateSuccess) {
+			ctx.ui.notify(`Updated to v${newVersion}!\n\nRestart pi to use the new version.`, "success");
+		} else {
+			ctx.ui.notify(
+				`Update command completed but version is still v${newVersion}.\n\n${getManualInstructions()}`,
+				"warning"
+			);
+		}
+	} catch (error) {
+		ctx.ui.setStatus("pi-updater", undefined);
+
+		const errorMessage = error instanceof Error ? error.message : String(error);
+		ctx.ui.notify(
+			`Update failed:\n  Command: ${fullCommand}\n  Error: ${errorMessage}\n\n${getManualInstructions()}`,
+			"error"
+		);
+	}
 }
 
 export default function (pi: ExtensionAPI) {
@@ -243,7 +345,8 @@ export default function (pi: ExtensionAPI) {
 						command: "npm",
 						args: ["install", "-g", `${PACKAGE}@latest`],
 					};
-					return await performUpdate(fallbackManager, ctx);
+					await performUpdate(fallbackManager, ctx);
+					return;
 				}
 
 				ctx.ui.setStatus("pi-updater", undefined);
@@ -254,58 +357,6 @@ export default function (pi: ExtensionAPI) {
 			await performUpdate(pkgManager, ctx);
 		},
 	});
-
-	async function performUpdate(pkgManager: PackageManagerInfo, ctx: UpdateContext): Promise<void> {
-		// Step 2: Get versions
-		ctx.ui.setStatus("pi-updater", "Checking for updates...");
-		const [currentVersion, latestVersion] = await Promise.all([
-			getCurrentVersion(),
-			getLatestVersion(),
-		]);
-		ctx.ui.setStatus("pi-updater", undefined);
-
-		if (!latestVersion) {
-			ctx.ui.notify("Failed to fetch latest version. Please check your network connection.", "error");
-			return;
-		}
-
-		// Step 3: Check if update is needed
-		if (!isNewer(currentVersion, latestVersion)) {
-			ctx.ui.notify(`Already on latest version (v${currentVersion})`, "info");
-			return;
-		}
-
-		// Step 4: Confirm update
-		const confirmed = await ctx.ui.confirm(
-			"Update pi?",
-			`Update pi from v${currentVersion} to v${latestVersion}?`
-		);
-
-		if (!confirmed) {
-			ctx.ui.notify("Update cancelled", "info");
-			return;
-		}
-
-		// Step 5: Run update
-		ctx.ui.setStatus("pi-updater", `Updating to v${latestVersion}...`);
-
-		const fullCommand = `${pkgManager.command} ${pkgManager.args.join(" ")}`;
-		try {
-			await execAsync(fullCommand, {
-				encoding: "utf-8",
-				timeout: 120000, // 2 minutes for slow connections
-			});
-
-			ctx.ui.setStatus("pi-updater", undefined);
-			ctx.ui.notify(`Updated to v${latestVersion}!\n\nRestart pi to use the new version.`, "success");
-		} catch (error) {
-			ctx.ui.setStatus("pi-updater", undefined);
-
-			const errorMessage = error instanceof Error ? error.message : String(error);
-			ctx.ui.notify(
-				`Update failed:\n  Command: ${fullCommand}\n  Error: ${errorMessage}\n\n${getManualInstructions()}`,
-				"error"
-			);
-		}
-	}
 }
+
+
