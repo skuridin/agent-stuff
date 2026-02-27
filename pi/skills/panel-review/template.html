@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Panel Review</title>
+<style>
+  /* ── Tokens ── */
+  :root {
+    --font-sans: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
+    --font-mono: 'SF Mono', 'Fira Code', 'Fira Mono', Menlo, Consolas, monospace;
+    --radius: 6px;
+    --transition: 150ms ease;
+  }
+
+  /* ── Light palette ── */
+  :root, [data-theme="light"] {
+    --bg: #fafafa;
+    --surface: #ffffff;
+    --surface-hover: #f5f5f5;
+    --border: #eaeaea;
+    --border-strong: #d4d4d4;
+    --text: #171717;
+    --text-secondary: #666666;
+    --text-tertiary: #999999;
+    --code-bg: #f5f5f5;
+    --badge-critical-bg: #fef2f2; --badge-critical-fg: #dc2626;
+    --badge-high-bg: #fff4ed; --badge-high-fg: #c2410c;
+    --badge-medium-bg: #fefce8; --badge-medium-fg: #a16207;
+    --badge-low-bg: #eff6ff; --badge-low-fg: #1d4ed8;
+    --badge-nitpick-bg: #f5f5f5; --badge-nitpick-fg: #737373;
+    --badge-confirmed-bg: #f0fdf4; --badge-confirmed-fg: #15803d;
+    --badge-theoretical-bg: #fefce8; --badge-theoretical-fg: #a16207;
+    --accent: #0070f3;
+    --bar-critical: #dc2626; --bar-high: #f97316; --bar-medium: #eab308; --bar-low: #3b82f6; --bar-nitpick: #d4d4d4;
+    --copy-bg: #f5f5f5; --copy-bg-hover: #eaeaea;
+    --copy-success: #16a34a;
+    --comment-bg: #fafafa;
+    --table-header-bg: #fafafa;
+    --toggle-bg: #f5f5f5;
+    --toggle-active-bg: #ffffff;
+    --toggle-border: #eaeaea;
+  }
+
+  /* ── Dark palette ── */
+  [data-theme="dark"] {
+    --bg: #0a0a0a;
+    --surface: #141414;
+    --surface-hover: #1a1a1a;
+    --border: #262626;
+    --border-strong: #404040;
+    --text: #ededed;
+    --text-secondary: #a3a3a3;
+    --text-tertiary: #737373;
+    --code-bg: #1a1a1a;
+    --badge-critical-bg: rgba(220,38,38,0.12); --badge-critical-fg: #f87171;
+    --badge-high-bg: rgba(249,115,22,0.12); --badge-high-fg: #fb923c;
+    --badge-medium-bg: rgba(234,179,8,0.12); --badge-medium-fg: #facc15;
+    --badge-low-bg: rgba(59,130,246,0.12); --badge-low-fg: #60a5fa;
+    --badge-nitpick-bg: rgba(163,163,163,0.1); --badge-nitpick-fg: #a3a3a3;
+    --badge-confirmed-bg: rgba(34,197,94,0.1); --badge-confirmed-fg: #4ade80;
+    --badge-theoretical-bg: rgba(234,179,8,0.1); --badge-theoretical-fg: #facc15;
+    --accent: #3291ff;
+    --bar-critical: #dc2626; --bar-high: #f97316; --bar-medium: #eab308; --bar-low: #3b82f6; --bar-nitpick: #404040;
+    --copy-bg: #1a1a1a; --copy-bg-hover: #262626;
+    --copy-success: #4ade80;
+    --comment-bg: #111111;
+    --table-header-bg: #111111;
+    --toggle-bg: #1a1a1a;
+    --toggle-active-bg: #262626;
+    --toggle-border: #333333;
+  }
+
+  /* ── Auto: follow system ── */
+  @media (prefers-color-scheme: dark) {
+    [data-theme="auto"] {
+      --bg: #0a0a0a;
+      --surface: #141414;
+      --surface-hover: #1a1a1a;
+      --border: #262626;
+      --border-strong: #404040;
+      --text: #ededed;
+      --text-secondary: #a3a3a3;
+      --text-tertiary: #737373;
+      --code-bg: #1a1a1a;
+      --badge-critical-bg: rgba(220,38,38,0.12); --badge-critical-fg: #f87171;
+      --badge-high-bg: rgba(249,115,22,0.12); --badge-high-fg: #fb923c;
+      --badge-medium-bg: rgba(234,179,8,0.12); --badge-medium-fg: #facc15;
+      --badge-low-bg: rgba(59,130,246,0.12); --badge-low-fg: #60a5fa;
+      --badge-nitpick-bg: rgba(163,163,163,0.1); --badge-nitpick-fg: #a3a3a3;
+      --badge-confirmed-bg: rgba(34,197,94,0.1); --badge-confirmed-fg: #4ade80;
+      --badge-theoretical-bg: rgba(234,179,8,0.1); --badge-theoretical-fg: #facc15;
+      --accent: #3291ff;
+      --bar-critical: #dc2626; --bar-high: #f97316; --bar-medium: #eab308; --bar-low: #3b82f6; --bar-nitpick: #404040;
+      --copy-bg: #1a1a1a; --copy-bg-hover: #262626;
+      --copy-success: #4ade80;
+      --comment-bg: #111111;
+      --table-header-bg: #111111;
+      --toggle-bg: #1a1a1a;
+      --toggle-active-bg: #262626;
+      --toggle-border: #333333;
+    }
+  }
+
+  /* ── Reset & base ── */
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: var(--font-sans);
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  .container {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 3rem 1.5rem 4rem;
+  }
+
+  /* ── Header ── */
+  .header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2.5rem;
+  }
+
+  .header-left h1 {
+    font-size: 1.5rem;
+    font-weight: 600;
+    letter-spacing: -0.025em;
+    line-height: 1.3;
+  }
+
+  .header-left .meta {
+    margin-top: 0.35rem;
+    font-size: 0.8125rem;
+    color: var(--text-tertiary);
+  }
+
+  .header-left .meta a {
+    color: var(--text-secondary);
+    text-decoration: none;
+    border-bottom: 1px solid var(--border);
+    transition: color var(--transition), border-color var(--transition);
+  }
+
+  .header-left .meta a:hover {
+    color: var(--text);
+    border-color: var(--text-secondary);
+  }
+
+  /* ── Theme toggle ── */
+  .theme-toggle {
+    display: flex;
+    background: var(--toggle-bg);
+    border: 1px solid var(--toggle-border);
+    border-radius: 8px;
+    padding: 2px;
+    gap: 2px;
+    flex-shrink: 0;
+  }
+
+  .theme-toggle button {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 28px;
+    border: none;
+    background: transparent;
+    border-radius: 6px;
+    cursor: pointer;
+    color: var(--text-tertiary);
+    transition: all var(--transition);
+    font-size: 0.875rem;
+  }
+
+  .theme-toggle button:hover {
+    color: var(--text-secondary);
+    background: var(--surface-hover);
+  }
+
+  .theme-toggle button.active {
+    background: var(--toggle-active-bg);
+    color: var(--text);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+  }
+
+  .theme-toggle button svg {
+    width: 15px;
+    height: 15px;
+  }
+
+  /* ── Summary table ── */
+  .summary-table {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    border-spacing: 0;
+    overflow: hidden;
+    margin-bottom: 2.5rem;
+    font-size: 0.8125rem;
+  }
+
+  .summary-table th {
+    text-align: left;
+    padding: 0.625rem 0.875rem;
+    background: var(--table-header-bg);
+    border-bottom: 1px solid var(--border);
+    color: var(--text-tertiary);
+    font-weight: 500;
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+  }
+
+  .summary-table td {
+    padding: 0.5rem 0.875rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .summary-table tr:last-child td { border-bottom: none; }
+
+  .summary-table tr:hover td {
+    background: var(--surface-hover);
+  }
+
+  .summary-table td:first-child {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    width: 2.5rem;
+    text-align: center;
+  }
+
+  /* ── Badges ── */
+  .badge {
+    display: inline-block;
+    padding: 0.125rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.6875rem;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+    text-transform: uppercase;
+    white-space: nowrap;
+  }
+
+  .badge-critical { background: var(--badge-critical-bg); color: var(--badge-critical-fg); }
+  .badge-high { background: var(--badge-high-bg); color: var(--badge-high-fg); }
+  .badge-medium { background: var(--badge-medium-bg); color: var(--badge-medium-fg); }
+  .badge-low { background: var(--badge-low-bg); color: var(--badge-low-fg); }
+  .badge-nitpick { background: var(--badge-nitpick-bg); color: var(--badge-nitpick-fg); }
+  .badge-confirmed { background: var(--badge-confirmed-bg); color: var(--badge-confirmed-fg); }
+  .badge-theoretical { background: var(--badge-theoretical-bg); color: var(--badge-theoretical-fg); }
+
+  /* ── Issue cards ── */
+  .issue {
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    margin-bottom: 1rem;
+    overflow: hidden;
+    background: var(--surface);
+    transition: border-color var(--transition);
+  }
+
+  .issue:hover {
+    border-color: var(--border-strong);
+  }
+
+  .issue-inner {
+    padding: 1.5rem;
+    border-left: 3px solid transparent;
+  }
+
+  .issue-inner.bar-critical { border-left-color: var(--bar-critical); }
+  .issue-inner.bar-high { border-left-color: var(--bar-high); }
+  .issue-inner.bar-medium { border-left-color: var(--bar-medium); }
+  .issue-inner.bar-low { border-left-color: var(--bar-low); }
+  .issue-inner.bar-nitpick { border-left-color: var(--bar-nitpick); }
+
+  .issue-header {
+    display: flex;
+    align-items: baseline;
+    gap: 0.625rem;
+    margin-bottom: 0.125rem;
+    flex-wrap: wrap;
+  }
+
+  .issue-number {
+    font-family: var(--font-mono);
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    font-weight: 500;
+  }
+
+  .issue-title {
+    font-weight: 600;
+    font-size: 0.9375rem;
+    letter-spacing: -0.01em;
+  }
+
+  .issue-badges {
+    display: flex;
+    gap: 0.375rem;
+    margin-bottom: 1rem;
+  }
+
+  .issue-reviewers {
+    font-size: 0.75rem;
+    color: var(--text-tertiary);
+    margin-bottom: 1rem;
+  }
+
+  .section-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+    margin-top: 1.25rem;
+    margin-bottom: 0.375rem;
+  }
+
+  .issue p, .issue ul {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+    line-height: 1.65;
+  }
+
+  .issue ul {
+    padding-left: 1.25rem;
+    margin-top: 0.25rem;
+  }
+
+  .issue li {
+    margin-bottom: 0.2rem;
+  }
+
+  .issue strong {
+    color: var(--text);
+    font-weight: 600;
+  }
+
+  /* ── Code ── */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 0.875rem 1rem;
+    overflow-x: auto;
+    font-size: 0.8125rem;
+    line-height: 1.6;
+    margin: 0.5rem 0 0;
+  }
+
+  code {
+    font-family: var(--font-mono);
+    font-size: 0.8125em;
+  }
+
+  p code, li code {
+    background: var(--code-bg);
+    padding: 0.1rem 0.35rem;
+    border-radius: 4px;
+    border: 1px solid var(--border);
+    font-size: 0.8em;
+  }
+
+  .file-ref {
+    font-family: var(--font-mono);
+    font-size: 0.8em;
+    color: var(--accent);
+  }
+
+  /* ── PR Comment box ── */
+  .comment-section {
+    margin-top: 1.25rem;
+  }
+
+  .comment-box {
+    background: var(--comment-bg);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+
+  .comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--code-bg);
+  }
+
+  .comment-header-label {
+    font-size: 0.6875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-tertiary);
+  }
+
+  .copy-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    background: var(--copy-bg);
+    border: 1px solid var(--border);
+    color: var(--text-secondary);
+    border-radius: var(--radius);
+    padding: 0.25rem 0.625rem;
+    font-size: 0.6875rem;
+    font-weight: 500;
+    font-family: var(--font-sans);
+    cursor: pointer;
+    transition: all var(--transition);
+  }
+
+  .copy-btn:hover {
+    background: var(--copy-bg-hover);
+    border-color: var(--border-strong);
+    color: var(--text);
+  }
+
+  .copy-btn.copied {
+    color: var(--copy-success);
+    border-color: var(--copy-success);
+  }
+
+  .copy-btn svg {
+    width: 12px;
+    height: 12px;
+  }
+
+  .comment-location {
+    display: flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.5rem 1rem;
+    font-size: 0.75rem;
+    font-family: var(--font-mono);
+    color: var(--text-tertiary);
+    border-bottom: 1px solid var(--border);
+    background: var(--code-bg);
+  }
+
+  .comment-location svg {
+    width: 12px;
+    height: 12px;
+    flex-shrink: 0;
+  }
+
+  .comment-text {
+    padding: 0.75rem 1rem;
+    font-size: 0.8125rem;
+    line-height: 1.65;
+    color: var(--text-secondary);
+    white-space: pre-wrap;
+    word-wrap: break-word;
+  }
+
+  /* ── Empty state ── */
+  .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-tertiary);
+    font-size: 0.875rem;
+  }
+
+  /* ── Responsive ── */
+  @media (max-width: 600px) {
+    .container { padding: 1.5rem 1rem 3rem; }
+    .header { flex-direction: column; gap: 1rem; }
+    .issue-inner { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<div class="container">
+  <div id="app"></div>
+</div>
+
+<!--
+  REVIEW DATA — Replace the JSON below with actual review data.
+  Schema:
+  {
+    "target": { "label": "PR #123", "url": "https://...", "title": "feat: ..." },
+    "issues": [
+      {
+        "title": "Issue title",
+        "severity": "critical|high|medium|low|nitpick",
+        "confidence": "confirmed|theoretical",
+        "reviewers": "Frontend, A11y",
+        "sections": [
+          { "label": "Problem", "md": "Description with `code` and **bold**" },
+          { "label": "Why it matters", "md": "..." }
+        ],
+        "code": "// optional code block",
+        "comment": "Plain text PR comment for copy button"
+      }
+    ]
+  }
+
+  Mini-markdown supported in `md` fields:
+  - `code` → <code>
+  - **bold** → <strong>
+  - - item lines → <ul><li>
+  - Blank lines → paragraph breaks
+  - ```\ncode\n``` → <pre><code>
+-->
+<script id="review-data" type="application/json">{"issues":[]}</script>
+
+<script>
+(function () {
+  var data = JSON.parse(document.getElementById('review-data').textContent);
+  var app = document.getElementById('app');
+  var issues = data.issues || [];
+  var target = data.target || {};
+
+  // ── Theme toggle ──
+  var ICONS = {
+    auto: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/></svg>',
+    light: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="5"/><line x1="12" y1="1" x2="12" y2="3"/><line x1="12" y1="21" x2="12" y2="23"/><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/><line x1="1" y1="12" x2="3" y2="12"/><line x1="21" y1="12" x2="23" y2="12"/><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/></svg>',
+    dark: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/></svg>'
+  };
+  var COPY_ICON = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"/><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"/></svg>';
+  var CHECK_ICON = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"/></svg>';
+
+  // ── Helpers ──
+  function esc(s) {
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+  }
+
+  function minimd(text) {
+    if (!text) return '';
+    // Split into blocks by fenced code vs everything else
+    var parts = text.split(/(```[\s\S]*?```)/g);
+    var out = '';
+    for (var i = 0; i < parts.length; i++) {
+      var part = parts[i];
+      if (part.indexOf('```') === 0 && part.lastIndexOf('```') > 0 && part.length > 6) {
+        // Fenced code block — strip opening/closing ``` (and optional language tag)
+        var inner = part.replace(/^```[^\n]*\n?/, '').replace(/\n?```$/, '');
+        out += '<pre><code>' + esc(inner) + '</code></pre>';
+      } else {
+        out += renderInlineBlocks(part);
+      }
+    }
+    return out;
+  }
+
+  function renderInlineBlocks(text) {
+    // Split by double newlines into paragraphs
+    var blocks = text.split(/\n\n+/);
+    var out = '';
+    for (var b = 0; b < blocks.length; b++) {
+      var block = blocks[b].trim();
+      if (!block) continue;
+      // Check if the entire block is a list (all lines start with "- ")
+      var lines = block.split('\n');
+      var isList = lines.every(function (l) { return /^\s*- /.test(l); });
+      if (isList) {
+        out += '<ul>';
+        for (var li = 0; li < lines.length; li++) {
+          out += '<li>' + inlineFormat(lines[li].replace(/^\s*- /, '')) + '</li>';
+        }
+        out += '</ul>';
+      } else {
+        out += '<p>' + inlineFormat(block) + '</p>';
+      }
+    }
+    return out;
+  }
+
+  function inlineFormat(s) {
+    // Escape HTML, then apply inline formatting
+    s = esc(s);
+    // `code`
+    s = s.replace(/`([^`]+)`/g, '<code>$1</code>');
+    // **bold**
+    s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    // file:line references — word.ext:number
+    s = s.replace(/(\b[\w./-]+\.\w+:\d+\b)/g, '<span class="file-ref">$1</span>');
+    return s;
+  }
+
+  // ── Title ──
+  var title = 'Panel Review';
+  if (target.label) {
+    document.title = title + ' \u2014 ' + target.label;
+  }
+
+  // ── Build header ──
+  var metaHtml = '';
+  if (target.label) {
+    if (target.url) {
+      metaHtml += '<a href="' + esc(target.url) + '">' + esc(target.label) + '</a>';
+    } else {
+      metaHtml += esc(target.label);
+    }
+    if (target.title) {
+      metaHtml += ' &middot; ' + esc(target.title);
+    }
+  }
+
+  var html = '<div class="header">' +
+    '<div class="header-left"><h1>' + title + '</h1>' +
+    (metaHtml ? '<div class="meta">' + metaHtml + '</div>' : '') +
+    '</div>' +
+    '<div class="theme-toggle" role="radiogroup" aria-label="Theme">' +
+    '<button title="System" aria-label="System theme" class="active" data-theme-btn="auto">' + ICONS.auto + '</button>' +
+    '<button title="Light" aria-label="Light theme" data-theme-btn="light">' + ICONS.light + '</button>' +
+    '<button title="Dark" aria-label="Dark theme" data-theme-btn="dark">' + ICONS.dark + '</button>' +
+    '</div></div>';
+
+  // ── Empty state ──
+  if (issues.length === 0) {
+    html += '<div class="empty-state">No issues found.</div>';
+    app.innerHTML = html;
+    bindTheme();
+    return;
+  }
+
+  // ── Summary table ──
+  html += '<table class="summary-table"><thead><tr>' +
+    '<th>#</th><th>Severity</th><th>Confidence</th><th>Summary</th>' +
+    '</tr></thead><tbody>';
+  for (var i = 0; i < issues.length; i++) {
+    var issue = issues[i];
+    var sev = (issue.severity || 'medium').toLowerCase();
+    var conf = (issue.confidence || 'confirmed').toLowerCase();
+    html += '<tr>' +
+      '<td>' + (i + 1) + '</td>' +
+      '<td><span class="badge badge-' + sev + '">' + esc(issue.severity) + '</span></td>' +
+      '<td><span class="badge badge-' + conf + '">' + esc(issue.confidence) + '</span></td>' +
+      '<td>' + inlineFormat(issue.title || '') + '</td>' +
+      '</tr>';
+  }
+  html += '</tbody></table>';
+
+  // ── Issue cards ──
+  for (var i = 0; i < issues.length; i++) {
+    var issue = issues[i];
+    var sev = (issue.severity || 'medium').toLowerCase();
+    var conf = (issue.confidence || 'confirmed').toLowerCase();
+    var num = i + 1;
+
+    html += '<div class="issue"><div class="issue-inner bar-' + sev + '">';
+    html += '<div class="issue-header">' +
+      '<span class="issue-number">#' + num + '</span>' +
+      '<span class="issue-title">' + inlineFormat(issue.title || '') + '</span>' +
+      '</div>';
+    html += '<div class="issue-badges">' +
+      '<span class="badge badge-' + sev + '">' + esc(issue.severity) + '</span>' +
+      '<span class="badge badge-' + conf + '">' + esc(issue.confidence) + '</span>' +
+      '</div>';
+    if (issue.reviewers) {
+      html += '<div class="issue-reviewers">' + esc(issue.reviewers) + '</div>';
+    }
+
+    // Sections
+    var sections = issue.sections || [];
+    for (var s = 0; s < sections.length; s++) {
+      html += '<div class="section-label">' + esc(sections[s].label) + '</div>';
+      html += minimd(sections[s].md);
+    }
+
+    // Code block
+    if (issue.code) {
+      html += '<pre><code>' + esc(issue.code) + '</code></pre>';
+    }
+
+    // PR Comment
+    if (issue.comment) {
+      var locationHtml = '';
+      if (issue.file) {
+        var fileIcon = '<svg viewBox="0 0 16 16" fill="currentColor"><path d="M2 1.75C2 .784 2.784 0 3.75 0h6.586c.464 0 .909.184 1.237.513l2.914 2.914c.329.328.513.773.513 1.237v9.586A1.75 1.75 0 0 1 13.25 16h-9.5A1.75 1.75 0 0 1 2 14.25Zm1.75-.25a.25.25 0 0 0-.25.25v12.5c0 .138.112.25.25.25h9.5a.25.25 0 0 0 .25-.25V6h-2.75A1.75 1.75 0 0 1 9 4.25V1.5Zm6.75.062V4.25c0 .138.112.25.25.25h2.688l-.011-.013-2.914-2.914-.013-.011Z"/></svg>';
+        var loc = esc(issue.file) + (issue.line ? ':' + issue.line : '');
+        locationHtml = '<div class="comment-location">' + fileIcon + ' ' + loc + '</div>';
+      }
+      html += '<div class="comment-section"><div class="comment-box">' +
+        '<div class="comment-header">' +
+        '<span class="comment-header-label">PR Comment</span>' +
+        '<button class="copy-btn" data-comment-index="' + i + '">' + COPY_ICON + ' Copy</button>' +
+        '</div>' +
+        locationHtml +
+        '<div class="comment-text">' + esc(issue.comment) + '</div>' +
+        '</div></div>';
+    }
+
+    html += '</div></div>';
+  }
+
+  app.innerHTML = html;
+
+  // ── Bind copy buttons ──
+  var copyBtns = document.querySelectorAll('.copy-btn[data-comment-index]');
+  copyBtns.forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var idx = parseInt(btn.getAttribute('data-comment-index'), 10);
+      var text = issues[idx].comment || '';
+      navigator.clipboard.writeText(text).then(function () {
+        var original = btn.innerHTML;
+        btn.innerHTML = CHECK_ICON + ' Copied';
+        btn.classList.add('copied');
+        setTimeout(function () {
+          btn.innerHTML = original;
+          btn.classList.remove('copied');
+        }, 2000);
+      });
+    });
+  });
+
+  // ── Theme ──
+  function bindTheme() {
+    var btns = document.querySelectorAll('.theme-toggle button');
+    btns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        var theme = btn.getAttribute('data-theme-btn');
+        document.documentElement.setAttribute('data-theme', theme);
+        localStorage.setItem('panel-review-theme', theme);
+        btns.forEach(function (b) {
+          b.classList.toggle('active', b.getAttribute('data-theme-btn') === theme);
+        });
+      });
+    });
+    var saved = localStorage.getItem('panel-review-theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+      btns.forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-theme-btn') === saved);
+      });
+    }
+  }
+  bindTheme();
+})();
+</script>
+
+</body>
+</html>
