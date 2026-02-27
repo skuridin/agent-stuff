@@ -7,4 +7,5 @@
 - ALWAYS prefer targeted discovery commands over full tree dumps (e.g. `rg --files <path>`, `find <path> -maxdepth <n>`).
 - ALWAYS cap exploratory output when possible (e.g. pipe to `head -n 50`).
 - When the user provides an exact file path, skip directory exploration and read the file directly.
+- ALWAYS use rg instead of grep when available
 
