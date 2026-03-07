@@ -201,6 +201,29 @@ ssh -F ~/.lima/default/ssh.config lima-default
 
 Or use the lima shell command which handles SSH internally.
 
+### Port Forwarding to Access VM Services
+
+Forward a VM port to localhost for accessing services running inside the VM:
+
+```bash
+ssh -F ~/.lima/<instance>/ssh.config -N -f -L <local-port>:127.0.0.1:<vm-port> lima-<instance>
+```
+
+Example - access VM's web server on localhost:8080:
+```bash
+ssh -F ~/.lima/default/ssh.config -N -f -L 8080:127.0.0.1:80 lima-default
+```
+
+Example - forward multiple ports for a VPN panel and proxy:
+```bash
+ssh -F ~/.lima/vpn-server/ssh.config -N -f -L 12053:127.0.0.1:2053 lima-vpn-server
+```
+
+To stop port forwarding, find and kill the SSH process:
+```bash
+pkill -f "12053:.*2053"
+```
+
 ## Container Workloads
 
 Lima includes containerd and nerdctl (Docker-compatible CLI):
@@ -298,13 +321,34 @@ lima docker run hello-world
   - Check mount type compatibility with VM type
   - For 9p/virtiofs, ensure VM supports it
 
-- **Container runtime issues**:
+- **Container runtime issues (systemd-based VMs)**:
   - Verify containerd status: `lima systemctl status containerd`
   - Restart containerd: `lima sudo systemctl restart containerd`
+
+- **Service issues (Alpine/OpenRC)**:
+  - Alpine uses OpenRC, not systemd
+  - Check service: `lima sudo rc-service <name> status`
+  - Start/stop: `lima sudo rc-service <name> start|stop|restart`
+  - Enable on boot: `lima sudo rc-update add <name> default`
+  - List enabled: `lima sudo rc-update show default`
 
 - **Network connectivity**:
   - Test from inside VM: `lima ping -c 3 google.com`
   - Check DNS: `lima cat /etc/resolv.conf`
+
+## Quirks & Notes
+
+### Non-Root User Paths
+
+Lima creates users with a `.linux` suffix in the home directory to avoid conflicts:
+- Expected: `/home/<user>/`
+- Actual: `/home/<user>.linux/`
+
+Keep this in mind when accessing user-specific files, credentials, or config directories:
+```bash
+# Example: cloudflared credentials location
+/home/redfield.linux/.cloudflared/cert.pem
+```
 
 ## Completion Checklist
 
