@@ -1,4 +1,4 @@
 # Agent Stuff
 
-Commands, skills, hooks, etc., for coding agents
+A collection of skills and extensions I use across various projects.
 
