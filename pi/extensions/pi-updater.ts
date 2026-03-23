@@ -7,7 +7,7 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { exec, spawn } from "node:child_process";
+import { exec } from "node:child_process";
 import { promisify } from "node:util";
 import * as fs from "node:fs/promises";
 import * as path from "node:path";
@@ -242,18 +242,7 @@ function getManualInstructions(): string {
   pnpm update -g @mariozechner/pi-coding-agent@latest`;
 }
 
-/**
- * Restart pi by spawning a new instance
- */
-async function restartPi(ctx: UpdateContext): Promise<void> {
-	const piPath = await getPiBinaryPath();
-	if (piPath) {
-		spawn(piPath, process.argv.slice(2), {
-			detached: true,
-			stdio: "inherit",
-		});
-	}
-}
+
 
 /**
  * Perform the actual update using the detected package manager
@@ -313,19 +302,7 @@ async function performUpdate(
 			(newVersion === latestVersion || isNewer(currentVersion, newVersion));
 
 		if (updateSuccess) {
-			const choice = await ctx.ui.select(
-				`Updated to v${newVersion}!`,
-				["Restart now", "Restart later"]
-			);
-
-			if (choice === "Restart now") {
-				ctx.ui.notify("Restarting pi...", "info");
-				await restartPi(ctx);
-				await ctx.shutdown();
-			} else if (choice === "Restart later") {
-				ctx.ui.notify("Update complete. Run `pi` again when ready.", "info");
-			}
-			// else (cancelled) - do nothing
+			ctx.ui.notify(`Updated to v${newVersion}! Run \`pi\` again to use the new version.`, "success");
 		} else {
 			ctx.ui.notify(
 				`Update command completed but version is still v${newVersion}.\n\n${getManualInstructions()}`,
