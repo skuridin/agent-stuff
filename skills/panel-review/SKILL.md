@@ -26,6 +26,24 @@ For PR reviews, run a git safety preflight before any `gh pr checkout`:
 
 Then checkout the PR branch with `gh pr checkout` so you can read the full source files for context — not just the diff. Focus on changed lines but read surrounding code and related files to flag issues in context. For file/component reviews, read the full file and review holistically.
 
+For PR reviews, do not stop at the edited lines. Always identify changed, replaced, and newly exported symbols, then inspect related wrappers, adapters, helper types, contexts, and barrel exports for cleanup opportunities.
+
+## PR review workflow
+
+For pull requests, follow this workflow before finalizing findings:
+
+1. Read the PR metadata and full diff.
+2. Identify symbols that were added, removed, renamed, or replaced.
+3. Run repo-wide usage searches for:
+   - removed or replaced symbols
+   - wrappers/adapters around those symbols
+   - helper types, contexts, and utilities that only existed to support the old abstraction
+   - barrel exports for touched modules
+4. Read the full source files for the changed code and any nearby related files.
+5. If a changed module is exported from a shared package, review it against arbitrary valid consumer input - not only the current in-repo call sites.
+6. If the PR builds selectors, regexes, URLs, paths, commands, or other structured strings from variables, verify escaping/encoding/validation.
+7. Only then deduplicate findings and rank them by severity.
+
 ## Expert panel
 
 1. **CI/CD Engineer** — workflow correctness, triggers, caching
@@ -46,7 +64,11 @@ Always run these passes for every review target, even if no issue is found:
 1. **Semantic structure pass** — verify rendered markup is semantically appropriate for context.
 2. **Redundancy pass** — detect duplicate wrappers, repeated styling logic, and unnecessary abstraction layers.
 3. **Accessibility interaction pass** — verify keyboard/focus visibility and interaction affordances are preserved.
-4. **Simplicity pass (KISS)** — identify complexity that can be removed without reducing clarity or capability.
+4. **Simplicity pass (KISS)** — identify complexity that can be removed without reducing clarity or capability. Explicitly ask whether each abstraction/runtime helper buys real branching, reuse, or consistency, or is only static indirection.
+5. **Usage/reachability pass** — search for consumers of changed, removed, or replaced symbols; flag dead wrappers, stale helpers, orphaned types, and unused barrel exports introduced by the refactor.
+6. **Refactor cleanup pass** — compare the old abstraction to the new one and ask what compatibility layers or support code are now unnecessary.
+7. **Dynamic construction safety pass** — inspect interpolated values passed into selectors, regexes, URLs, paths, commands, or other structured syntaxes; verify escaping, encoding, or validation is appropriate.
+8. **Shared surface hardening pass** — for exported/shared components and utilities, review against arbitrary valid consumer input and edge cases, not just today's local usage.
 
 ## Severity rubric (use consistently)
 
@@ -66,6 +88,8 @@ Always run these passes for every review target, even if no issue is found:
 List all issues and suggestions from most important to least.
 
 Before finalizing the list, deduplicate overlapping findings from multiple reviewers into one canonical issue (merge reviewer attributions and keep the strongest evidence).
+
+Do not pad the review with harmless consistency-only observations. Report stylistic inconsistencies only when they create invalid markup, accessibility/correctness risk, duplicated responsibilities likely to drift, or meaningful maintenance burden.
 
 For each issue include:
 
@@ -88,6 +112,12 @@ To determine confidence, check:
 - Are there guards that prevent this code path?
 - Is this actually exercised in production usage?
 - What conditions must be true for this to occur?
+- Does the issue happen with today's observed call sites, or only with future/alternate consumers of a shared API?
+
+Use these rules consistently:
+- **Confirmed** — the bug exists in the current code path or rendered structure, or the repo already contains a reachable caller that triggers it.
+- **Theoretical** — the issue depends on uncommon input, future consumers, alternate callers, or assumptions that are not exercised by the current in-repo usage.
+- If a shared/exported component is under-hardened but current callers only pass safe values, prefer **Theoretical** unless you can show a present caller that triggers the bug.
 
 Prioritize confirmed issues. Theoretical issues should still be flagged but clearly labeled.
 
@@ -107,6 +137,12 @@ If the user points out a missed issue:
 3. Phrase new heuristics as tool/framework-agnostic patterns (no project-specific rules).
 
 Example heuristic format: "Check for nested wrapper components that duplicate semantics or styling responsibilities."
+
+Useful generic heuristics to add after misses:
+- "After replacing an abstraction, search for orphaned wrappers, adapters, contexts, helper types, and barrel exports that no longer have consumers."
+- "When code interpolates values into a structured syntax (selector, regex, URL, path, command), verify the value is escaped, encoded, or validated before use."
+- "For shared/exported APIs, evaluate robustness against plausible external inputs even if current local call sites are narrow and safe."
+- "Ask whether a styling or utility abstraction has any real variants/branching; if not, consider whether a static constant would be simpler."
 
 ## Interactive walkthrough
 
