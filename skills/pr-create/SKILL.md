@@ -90,6 +90,7 @@ These are already visible in the GitHub UI:
 - Code diffs
 - Branch name
 - Mechanical "added X, removed Y" — describe the intent instead
+- References to plans, phases, or slices that cannot be linked — if the plan exists only locally, skip it. The PR should stand on its own as a self-contained piece of work
 
 ### Format
 
