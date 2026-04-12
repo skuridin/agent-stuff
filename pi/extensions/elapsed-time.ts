@@ -30,6 +30,8 @@ export default function (pi: ExtensionAPI) {
     if (startTime === null) {
       startTime = Date.now();
       accumulatedTime = 0;
+      // Clear any stale widget from a previous round
+      ctx.ui.setWidget(WIDGET_KEY, [], { placement: "aboveEditor" });
     }
   });
 
