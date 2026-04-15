@@ -1,0 +1,18 @@
+[
+  {
+    "query": "[Realistic user prompt that should trigger the skill]",
+    "should_trigger": true
+  },
+  {
+    "query": "[Another should-trigger prompt with different wording, detail, or tone]",
+    "should_trigger": true
+  },
+  {
+    "query": "[Near-miss prompt that sounds related but should not trigger]",
+    "should_trigger": false
+  },
+  {
+    "query": "[Another negative prompt that overlaps in keywords but needs a different skill]",
+    "should_trigger": false
+  }
+]
