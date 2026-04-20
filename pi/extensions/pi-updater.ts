@@ -26,7 +26,7 @@ const PM_PATH_PATTERNS = {
 } as const;
 
 type PackageManager = "npm" | "bun" | "yarn" | "pnpm" | "fnm";
-type NotificationLevel = "info" | "warning" | "error" | "success";
+type NotificationLevel = "info" | "warning" | "error";
 
 interface PackageManagerInfo {
 	name: PackageManager;
@@ -302,7 +302,7 @@ async function performUpdate(
 			(newVersion === latestVersion || isNewer(currentVersion, newVersion));
 
 		if (updateSuccess) {
-			ctx.ui.notify(`Updated to v${newVersion}! Run \`pi\` again to use the new version.`, "success");
+			ctx.ui.notify(`Updated to v${newVersion}! Run \`pi\` again to use the new version.`, "info");
 		} else {
 			ctx.ui.notify(
 				`Update command completed but version is still v${newVersion}.\n\n${getManualInstructions()}`,

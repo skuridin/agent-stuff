@@ -6,7 +6,7 @@
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { Editor, type EditorTheme, Key, matchesKey, Text, truncateToWidth } from "@mariozechner/pi-tui";
+import { Editor, type EditorTheme, Key, matchesKey, Text, truncateToWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
 import { Type } from "@sinclair/typebox";
 
 // Types
@@ -311,14 +311,18 @@ export default function questionnaire(pi: ExtensionAPI) {
 								add(prefix + theme.fg(color, `${i + 1}. ${opt.label}`));
 							}
 							if (opt.description) {
-								add(`     ${theme.fg("muted", opt.description)}`);
+								for (const line of wrapTextWithAnsi(opt.description, Math.max(1, width - 5))) {
+									add(`     ${theme.fg("muted", line)}`);
+								}
 							}
 						}
 					}
 
 					// Content
 					if (inputMode && q) {
-						add(theme.fg("text", ` ${q.prompt}`));
+						for (const line of wrapTextWithAnsi(q.prompt, Math.max(1, width - 1))) {
+							add(theme.fg("text", ` ${line}`));
+						}
 						lines.push("");
 						// Show options for reference
 						renderOptions();
@@ -350,7 +354,9 @@ export default function questionnaire(pi: ExtensionAPI) {
 							add(theme.fg("warning", ` Unanswered: ${missing}`));
 						}
 					} else if (q) {
-						add(theme.fg("text", ` ${q.prompt}`));
+						for (const line of wrapTextWithAnsi(q.prompt, Math.max(1, width - 1))) {
+							add(theme.fg("text", ` ${line}`));
+						}
 						lines.push("");
 						renderOptions();
 					}
