@@ -7,7 +7,7 @@
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
 import { Editor, type EditorTheme, Key, matchesKey, Text, truncateToWidth, wrapTextWithAnsi } from "@mariozechner/pi-tui";
-import { Type } from "@sinclair/typebox";
+import { Type } from "typebox";
 
 // Types
 interface QuestionOption {
@@ -38,6 +38,16 @@ interface QuestionnaireResult {
 	questions: Question[];
 	answers: Answer[];
 	cancelled: boolean;
+}
+
+interface QuestionnaireToolParams {
+	questions: Array<{
+		id: string;
+		label?: string;
+		prompt: string;
+		options: QuestionOption[];
+		allowOther?: boolean;
+	}>;
 }
 
 // Schema
@@ -84,9 +94,16 @@ export default function questionnaire(pi: ExtensionAPI) {
 		label: "Questionnaire",
 		description:
 			`Ask the user one or more questions (max ${MAX_QUESTIONS}) and let them pick from options. Use for clarifying requirements, getting preferences, or confirming decisions. For a single question, shows a simple option list. For multiple questions, shows a tab-based interface. If you have more than ${MAX_QUESTIONS} questions, batch them into multiple calls.`,
+		promptSnippet: "Ask the user one or more multiple-choice questions and return structured answers.",
+		promptGuidelines: [
+			"Use questionnaire when you need explicit user choices for requirements, preferences, scope, or confirmation.",
+			"Use questionnaire with 1 question for a quick decision; use up to 5 questions for a small multi-step clarification flow.",
+			"In questionnaire, provide clear option labels and stable option values; enable allowOther only when free-form input is useful.",
+			"If questionnaire needs more than 5 questions, call questionnaire again in a follow-up batch.",
+		],
 		parameters: QuestionnaireParams,
 
-		async execute(_toolCallId, params, _signal, _onUpdate, ctx) {
+		async execute(_toolCallId, params: QuestionnaireToolParams, _signal, _onUpdate, ctx) {
 			if (!ctx.hasUI) {
 				return errorResult("Error: UI not available (running in non-interactive mode)");
 			}

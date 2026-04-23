@@ -270,18 +270,7 @@ async function performUpdate(
 		return;
 	}
 
-	// Step 3: Confirm update
-	const confirmed = await ctx.ui.confirm(
-		"Update pi?",
-		`Update pi from v${currentVersion} to v${latestVersion}?`
-	);
-
-	if (!confirmed) {
-		ctx.ui.notify("Update cancelled", "info");
-		return;
-	}
-
-	// Step 4: Run update
+	// Step 3: Run update immediately (no confirmation)
 	ctx.ui.setStatus("pi-updater", `Updating to v${latestVersion}...`);
 
 	const fullCommand = `${pkgManager.command} ${pkgManager.args.join(" ")}`;
@@ -302,7 +291,12 @@ async function performUpdate(
 			(newVersion === latestVersion || isNewer(currentVersion, newVersion));
 
 		if (updateSuccess) {
-			ctx.ui.notify(`Updated to v${newVersion}! Run \`pi\` again to use the new version.`, "info");
+			ctx.ui.notify(
+				`Updated to v${newVersion}.
+Pi must be restarted to use the new version.
+Press Return to exit Pi, then start Pi again.`,
+				"info"
+			);
 		} else {
 			ctx.ui.notify(
 				`Update command completed but version is still v${newVersion}.\n\n${getManualInstructions()}`,
@@ -332,15 +326,7 @@ export default function (pi: ExtensionAPI) {
 			if (!pkgManager) {
 				ctx.ui.setStatus("pi-updater", "Checking for npm...");
 				if (await isCommandAvailable("npm")) {
-					const useNpm = await ctx.ui.confirm(
-						"Could not detect package manager",
-						"Use npm to update? (Recommended)"
-					);
-					if (!useNpm) {
-						ctx.ui.setStatus("pi-updater", undefined);
-						ctx.ui.notify("Update cancelled.\n\n" + getManualInstructions(), "info");
-						return;
-					}
+					ctx.ui.notify("Could not detect package manager. Falling back to npm update.", "warning");
 					// Use npm as fallback
 					const fallbackManager: PackageManagerInfo = {
 						name: "npm",
