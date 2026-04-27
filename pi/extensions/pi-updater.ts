@@ -40,6 +40,7 @@ interface UpdateContext {
 		confirm: (title: string, message: string) => Promise<boolean>;
 		notify: (message: string, level: NotificationLevel) => void;
 	};
+	shutdown: () => void;
 }
 
 /**
@@ -293,10 +294,10 @@ async function performUpdate(
 		if (updateSuccess) {
 			ctx.ui.notify(
 				`Updated to v${newVersion}.
-Pi must be restarted to use the new version.
-Press Return to exit Pi, then start Pi again.`,
+Pi will now exit so you can restart it and use the new version.`,
 				"info"
 			);
+			ctx.shutdown();
 		} else {
 			ctx.ui.notify(
 				`Update command completed but version is still v${newVersion}.\n\n${getManualInstructions()}`,
