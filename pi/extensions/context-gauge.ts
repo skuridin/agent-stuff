@@ -1,20 +1,17 @@
 /**
  * Context Gauge Extension
  *
- * Shows a progress bar in the footer indicating context usage towards 100k tokens.
- * The 100k threshold is a practical limit: beyond it, models tend to degrade regardless
- * of their actual context window size.
+ * Shows context usage as a token count in the footer. When usage exceeds 100k tokens,
+ * displays a red "You are in a dumb zone" warning. The 100k threshold is a practical
+ * limit: beyond it, models tend to degrade regardless of their actual context window size.
  *
- * Uses the "dim" theme color to match the default footer style.
+ * Uses the "dim" theme color to match the default footer style, and "error" for the
+ * dumb-zone warning.
  */
 
 import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
 
 const CONTEXT_CEILING = 100_000;
-const BAR_WIDTH = 20;
-
-const BLOCK_FULL = "█";
-const BLOCK_EMPTY = "░";
 
 function formatTokens(n: number): string {
 	if (n < 1_000) return `${n}`;
@@ -34,19 +31,20 @@ function updateGauge(ctx: ExtensionContext) {
 		}
 
 		const tokens = usage.tokens;
-		const ratio = Math.min(tokens / ceiling, 1);
-		const percent = Math.round(ratio * 100);
-		const filled = Math.round(ratio * BAR_WIDTH);
-		const empty = BAR_WIDTH - filled;
-
-		const bar = BLOCK_FULL.repeat(filled) + BLOCK_EMPTY.repeat(empty);
 		const label = `${formatTokens(tokens)}/${formatTokens(ceiling)}`;
 		const ceilingNote = ceiling < CONTEXT_CEILING ? " (model limit)" : "";
 
-		ctx.ui.setStatus(
-			"context-gauge",
-			theme.fg("dim", `${bar} ${label}${ceilingNote}`),
-		);
+		if (tokens > CONTEXT_CEILING) {
+			ctx.ui.setStatus(
+				"context-gauge",
+				`${theme.fg("dim", label)}${ceilingNote} ${theme.fg("error", "You are in a dumb zone")}`,
+			);
+		} else {
+			ctx.ui.setStatus(
+				"context-gauge",
+				theme.fg("dim", `${label}${ceilingNote}`),
+			);
+		}
 	} catch {
 		ctx.ui.setStatus("context-gauge", theme.fg("dim", "ctx --"));
 	}
