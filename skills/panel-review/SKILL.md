@@ -1,6 +1,6 @@
 ---
 name: panel-review
-description: Review code as a panel of experts with interactive walkthrough for PRs or files.
+description: Use this skill when reviewing code, PRs, files, or directories as an expert panel; supports interactive walkthroughs and opt-in draft GitHub reviews for multiple PRs.
 ---
 
 # Panel Review Skill
@@ -15,6 +15,7 @@ Look at the provided arguments to decide what to review:
 
 - **No arguments or "pr"** — review the current branch's PR. Use `gh pr view` to find it, then checkout the PR branch with `gh pr checkout` and use `gh pr diff` for changes.
 - **PR number (e.g. `123`) or URL (e.g. `github.com/.../pull/123`)** — review that specific PR. Checkout the PR branch with `gh pr checkout <number>`, then use `gh pr view <number>` and `gh pr diff <number>`.
+- **Multiple PR numbers or URLs** — only enter batch draft review mode when the request includes the phrase `draft review`. In that mode, review PRs one by one in the user-provided order, skip the interactive walkthrough, and create pending GitHub draft reviews for PRs with findings. If multiple PRs are provided without `draft review`, ask the user whether to review one PR interactively or rerun with `draft review` to post draft reviews.
 - **File path or component name (e.g. `src/components/Button.tsx`)** — review that file or find it via glob. Read the file and all closely related files (tests, types, parent components) to build context.
 - **Directory or glob (e.g. `apps/frontend/deploy/`)** — review all files matching the pattern.
 
@@ -24,7 +25,7 @@ For PR reviews, run a git safety preflight before any `gh pr checkout`:
 2. If there are uncommitted changes, pause and ask the user how to proceed (`continue`, `stash`, or `abort`).
 3. Do not switch branches on a dirty working tree without explicit user confirmation.
 
-Then checkout the PR branch with `gh pr checkout` so you can read the full source files for context — not just the diff. Focus on changed lines but read surrounding code and related files to flag issues in context. For file/component reviews, read the full file and review holistically.
+Then checkout the PR branch with `gh pr checkout` so you can read the full source files for context — not just the diff. Focus on changed lines but read surrounding code and related files to flag issues in context. For file/component reviews, read the full file and review holistically. Batch draft review mode has additional safety rules below.
 
 For PR reviews, do not stop at the edited lines. Always identify changed, replaced, and newly exported symbols, then inspect related wrappers, adapters, helper types, contexts, and barrel exports for cleanup opportunities.
 
@@ -43,6 +44,66 @@ For pull requests, follow this workflow before finalizing findings:
 5. If a changed module is exported from a shared package, review it against arbitrary valid consumer input - not only the current in-repo call sites.
 6. If the PR builds selectors, regexes, URLs, paths, commands, or other structured strings from variables, verify escaping/encoding/validation.
 7. Only then deduplicate findings and rank them by severity.
+
+## Batch draft PR review mode
+
+Use this mode only when all of these are true:
+
+- The user supplied multiple PR numbers or PR URLs.
+- The request contains the phrase `draft review`. Treat any `draft review` phrase as explicit opt-in for GitHub write actions; do not ask for extra confirmation.
+- All PRs belong to the current repository. If any PR targets a different repository, stop and ask the user to run that repository separately.
+
+Batch behavior:
+
+1. Preserve the PR order exactly as provided by the user.
+2. Require a clean working tree before starting. If `git status --porcelain` is non-empty, stop and ask the user to clean or stash before batch mode; do not continue on a dirty tree.
+3. Review PRs sequentially with `gh pr checkout`; do not process multiple PR branches concurrently in the same working tree.
+4. Leave the worktree checked out on the last PR that was processed; mention this in the final summary.
+5. If one PR fails due to checkout, permissions, diff mapping, or API errors, continue with the remaining PRs and include the failure in the final per-PR summary.
+6. If the environment supports subagents, use them only inside the currently checked-out PR for delegated expert passes. Do not use subagents to review different PRs in parallel unless isolated worktrees are explicitly created outside this skill's default flow. If subagents are unavailable, run the same review passes in the main agent.
+
+For each PR in batch mode:
+
+1. Run the normal PR review workflow and mandatory review passes.
+2. Deduplicate findings and include every finding severity, including Nitpick.
+3. Skip the interactive walkthrough entirely.
+4. Convert findings into GitHub draft review content:
+   - Use inline draft comments for findings that map cleanly to valid changed diff lines.
+   - Put real findings that do not map to a valid diff line in the pending draft review body.
+   - If GitHub rejects an inline comment because the line is not commentable, move that finding to the draft review body and retry once.
+5. Keep each draft PR comment concise and actionable. Include severity, confidence, the problem, and the smallest safe suggested fix. Do not paste the full panel issue template into every comment.
+6. If there are no findings for a PR, do not create a GitHub draft review for that PR; report it locally as clean/skipped.
+7. If the batch is rerun, do not try to detect, delete, or replace existing pending draft reviews; creating another pending draft is acceptable.
+
+Draft review creation rules:
+
+- Create a **pending/draft** review and do not publish it.
+- Use the GitHub Pull Request Reviews API via `gh api`; omit the `event` field so the review remains pending.
+- Do **not** use `gh pr review --comment`, `gh pr review --approve`, `gh pr review --request-changes`, or any review submit endpoint because those publish the review.
+- Build the API payload with the PR head commit SHA, an optional body for summary/non-inline findings, and an array of inline comments for valid diff lines. Example shape:
+
+```json
+{
+  "commit_id": "<pr-head-sha>",
+  "body": "Non-inline findings and concise summary, if any.",
+  "comments": [
+    {
+      "path": "src/file.ts",
+      "line": 42,
+      "side": "RIGHT",
+      "body": "Medium / Confirmed: Explain the issue and smallest safe fix."
+    }
+  ]
+}
+```
+
+Then call:
+
+```bash
+gh api -X POST "repos/<owner>/<repo>/pulls/<number>/reviews" --input /tmp/panel-review-<number>.json
+```
+
+Final batch output should be a concise per-PR summary only: PR identifier/title, success or failure, finding counts by severity, number of inline comments, whether body-only findings were included, and whether a pending draft review was created or skipped. Do not run the interactive command loop in batch mode.
 
 ## Expert panel
 
@@ -146,7 +207,9 @@ Useful generic heuristics to add after misses:
 
 ## Interactive walkthrough
 
-After presenting the full list, walk through issues one by one. For each issue:
+Skip this section entirely in batch draft PR review mode.
+
+For normal single-target reviews, after presenting the full list, walk through issues one by one. For each issue:
 
 1. State the issue number and total (e.g. "Issue 3 of 12") — **always start from issue 1; never skip the first issue**
 2. **Explain** the issue — describe what's wrong and why, with enough context that the user can evaluate it
