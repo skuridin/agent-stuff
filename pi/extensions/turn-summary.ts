@@ -37,7 +37,6 @@ export default function (pi: ExtensionAPI) {
   // ── Turn summary widget (shown above editor after agent ends) ───
 
   function getSummaryLines(ctx: ExtensionContext): string[] {
-    const theme = ctx.ui.theme;
     const parts: string[] = [];
     let isDumbZone = false;
 
@@ -50,9 +49,13 @@ export default function (pi: ExtensionAPI) {
     try {
       const usage = ctx.getContextUsage();
       if (usage && usage.tokens !== null) {
-        const ceiling = Math.min(CONTEXT_CEILING, usage.contextWindow);
-        const label = `${formatTokens(usage.tokens)}/${formatTokens(ceiling)}`;
-        isDumbZone = usage.tokens > CONTEXT_CEILING;
+        const effectiveContextWindow = usage.contextWindow ?? CONTEXT_CEILING;
+        const displayCeiling = Math.min(CONTEXT_CEILING, effectiveContextWindow);
+        const label = `${formatTokens(usage.tokens)}/${formatTokens(displayCeiling)}`;
+        // Dumb‑zone threshold: 50% of the model's context window, capped at 100k.
+        // Even models with very large context windows tend to degrade past 100k tokens.
+        const dumbZoneThreshold = Math.min(CONTEXT_CEILING, effectiveContextWindow * 0.5);
+        isDumbZone = usage.tokens > dumbZoneThreshold;
         parts.push(`Context: ${label}`);
       }
     } catch {
@@ -63,6 +66,7 @@ export default function (pi: ExtensionAPI) {
 
     if (parts.length === 0) return [];
 
+    const theme = ctx.ui.theme;
     let line = theme.fg("dim", parts.join(" · "));
     if (isDumbZone) {
       line += ` ${theme.fg("error", "dumb zone")}`;
@@ -77,8 +81,10 @@ export default function (pi: ExtensionAPI) {
     if (startTime === null) {
       startTime = Date.now();
       accumulatedTime = 0;
-      // Clear any stale widget from a previous run
-      ctx.ui.setWidget(WIDGET_KEY, [], { placement: "aboveEditor" });
+      // Clear any stale widget from a previous run (only in UI mode)
+      if (ctx.hasUI) {
+        ctx.ui.setWidget(WIDGET_KEY, [], { placement: "aboveEditor" });
+      }
     }
   });
 
@@ -90,9 +96,11 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("agent_end", async (_event, ctx) => {
-    const lines = getSummaryLines(ctx);
-    if (lines.length > 0) {
-      ctx.ui.setWidget(WIDGET_KEY, lines, { placement: "aboveEditor" });
+    if (ctx.hasUI) {
+      const lines = getSummaryLines(ctx);
+      if (lines.length > 0) {
+        ctx.ui.setWidget(WIDGET_KEY, lines, { placement: "aboveEditor" });
+      }
     }
 
     // Reset timer for next agent run
