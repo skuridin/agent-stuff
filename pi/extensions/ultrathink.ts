@@ -1,34 +1,36 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 
-type ThinkingLevel = "off" | "minimal" | "low" | "medium" | "high" | "xhigh";
-
 const ULTRATHINK_RE = /ultrathink/i;
 
 export default function ultrathinkExtension(pi: ExtensionAPI) {
-	const pendingUltrathinkTurns: boolean[] = [];
-	let restoreThinkingLevel: ThinkingLevel | undefined;
+	let ultrathinkNext = false;
+	let restoreThinkingLevel: ReturnType<ExtensionAPI["getThinkingLevel"]> | undefined;
 
 	pi.on("session_start", async () => {
-		pendingUltrathinkTurns.length = 0;
+		ultrathinkNext = false;
 		restoreThinkingLevel = undefined;
 	});
 
 	pi.on("input", async (event) => {
-		if (event.source === "extension") {
-			return { action: "continue" };
-		}
+		if (event.source === "extension") return;
 
-		pendingUltrathinkTurns.push(ULTRATHINK_RE.test(event.text));
-		return { action: "continue" };
+		ultrathinkNext = ULTRATHINK_RE.test(event.text);
 	});
 
 	pi.on("before_agent_start", async () => {
-		const ultrathinkRequested = pendingUltrathinkTurns.shift() ?? false;
+		// Clean up stale state from an interrupted turn
+		if (restoreThinkingLevel !== undefined) {
+			pi.setThinkingLevel(restoreThinkingLevel);
+			restoreThinkingLevel = undefined;
+		}
+
+		const ultrathinkRequested = ultrathinkNext;
+		ultrathinkNext = false;
 		if (!ultrathinkRequested) {
 			return;
 		}
 
-		restoreThinkingLevel = pi.getThinkingLevel() as ThinkingLevel;
+		restoreThinkingLevel = pi.getThinkingLevel();
 		pi.setThinkingLevel("xhigh");
 	});
 
@@ -44,7 +46,5 @@ export default function ultrathinkExtension(pi: ExtensionAPI) {
 			pi.setThinkingLevel(restoreThinkingLevel);
 			restoreThinkingLevel = undefined;
 		}
-
-		pendingUltrathinkTurns.length = 0;
 	});
 }
