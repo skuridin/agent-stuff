@@ -23,8 +23,12 @@ function formatTokens(n: number): string {
 
 function formatTime(ms: number): string {
   const totalSeconds = Math.floor(ms / 1000);
-  const minutes = Math.floor(totalSeconds / 60);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
   const seconds = totalSeconds % 60;
+  if (hours > 0) {
+    return `${hours}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
+  }
   return `${minutes}:${seconds.toString().padStart(2, "0")}`;
 }
 
@@ -32,7 +36,7 @@ function formatTime(ms: number): string {
 
 export default function (pi: ExtensionAPI) {
   let startTime: number | null = null;
-  let accumulatedTime = 0;
+  let elapsedMs = 0;
 
   // ── Turn summary widget (shown above editor after agent ends) ───
 
@@ -41,8 +45,8 @@ export default function (pi: ExtensionAPI) {
     let isDumbZone = false;
 
     // Elapsed time
-    if (startTime !== null && accumulatedTime >= 1000) {
-      parts.push(`Done in ${formatTime(accumulatedTime)}`);
+    if (startTime !== null && elapsedMs >= 1000) {
+      parts.push(`Done in ${formatTime(elapsedMs)}`);
     }
 
     // Final context usage
@@ -80,7 +84,7 @@ export default function (pi: ExtensionAPI) {
     // Start elapsed timer on first turn of a new agent run
     if (startTime === null) {
       startTime = Date.now();
-      accumulatedTime = 0;
+      elapsedMs = 0;
       // Clear any stale widget from a previous run (only in UI mode)
       if (ctx.hasUI) {
         ctx.ui.setWidget(WIDGET_KEY, [], { placement: "aboveEditor" });
@@ -89,9 +93,9 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("turn_end", async () => {
-    // Accumulate elapsed wall-clock time
+    // Snapshot elapsed wall-clock time
     if (startTime !== null) {
-      accumulatedTime = Date.now() - startTime;
+      elapsedMs = Date.now() - startTime;
     }
   });
 
@@ -105,6 +109,6 @@ export default function (pi: ExtensionAPI) {
 
     // Reset timer for next agent run
     startTime = null;
-    accumulatedTime = 0;
+    elapsedMs = 0;
   });
 }
