@@ -112,8 +112,10 @@ For each issue:
 
 Skip in batch mode.
 
-After presenting the full issue list, walk through issues one by one. For each: explain the issue with context, state confidence + justification, propose a concrete fix, and draft a plain-text GitHub PR comment (no code blocks, no `>` quote syntax). State the target file and line number separately.
+Present issues **one at a time**. Do not dump the full issue list before asking about the first issue; at most give a short count/summary by severity, then immediately show Issue 1 in full.
 
-After describing the issue and draft comment in plain text, wait for the user's text response before taking action.
+For each issue: explain the issue with context, state confidence + justification, propose a concrete fix, and draft a plain-text GitHub PR comment (no code blocks, no `>` quote syntax). State the target file and line number separately.
+
+After describing the current issue and draft comment in plain text, wait for the user's text response before taking action or moving to the next issue.
 
 Supports commands: **fix** (apply + stage, don't commit), **next**, **details**, **recheck**, **stop**.
