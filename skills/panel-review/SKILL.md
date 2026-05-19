@@ -114,6 +114,6 @@ Skip in batch mode.
 
 After presenting the full issue list, walk through issues one by one. For each: explain the issue with context, state confidence + justification, propose a concrete fix, and draft a plain-text GitHub PR comment (no code blocks, no `>` quote syntax). State the target file and line number separately.
 
-Use the questionnaire/question tool if available to present each issue and collect the user's command. If no question tool is available, wait for a text response.
+After describing the issue and draft comment in plain text, wait for the user's text response before taking action.
 
 Supports commands: **fix** (apply + stage, don't commit), **next**, **details**, **recheck**, **stop**.
