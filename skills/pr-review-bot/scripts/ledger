@@ -1,0 +1,87 @@
+#!/bin/sh
+set -eu
+
+repo_root=$(git rev-parse --show-toplevel 2>/dev/null || pwd)
+cd "$repo_root"
+repo_name=$(basename "$repo_root")
+
+branch=$(git branch --show-current 2>/dev/null || true)
+if [ -z "$branch" ]; then
+  branch=$(git rev-parse --short HEAD 2>/dev/null || echo detached)
+fi
+
+pr_number="${1:-}"
+if [ -z "$pr_number" ] && command -v gh >/dev/null 2>&1; then
+  pr_number=$(gh pr view --json number --jq .number 2>/dev/null || true)
+fi
+
+if [ -n "$pr_number" ]; then
+  ledger_name="$repo_name-pr-$pr_number"
+  scope="PR #$pr_number ($branch)"
+else
+  branch_slug=$(printf '%s' "$branch" | tr '/[:space:]' '--' | tr -cd '[:alnum:]._-' | sed 's/--*/-/g; s/^-//; s/-$//')
+  [ -n "$branch_slug" ] || branch_slug="detached"
+  ledger_name="$repo_name-$branch_slug"
+  scope="branch $branch"
+fi
+
+ledger_dir="/tmp/claude-review-ledgers"
+ledger_path="$ledger_dir/$ledger_name.md"
+mkdir -p "$ledger_dir"
+
+if [ ! -f "$ledger_path" ]; then
+  created_at=$(date -u +%Y-%m-%dT%H:%M:%SZ)
+  cat > "$ledger_path" <<EOF
+# Review ledger
+
+Scope: $scope
+Created: $created_at
+Last reviewed SHA:
+
+## Protocol
+- This ledger is history, not scope. It exists to deduplicate findings and
+  track resolutions; it does not bound what a review looks at. Every review
+  pass is a full fresh review of the current diff, as if the ledger's
+  findings had never been reported.
+- Read this ledger before every review or fix pass.
+- Keep finding IDs stable, e.g. R001, R002.
+- Do not rediscover fixed findings as new ones; reference the existing ID.
+- Treat locked decisions as reversible with explicit rationale.
+- If a previous fix breaks, mark it REGRESSED.
+- Update this ledger after every pass.
+
+## Invariants
+-
+
+## Findings
+| ID | Status | Severity | File(s) | Summary | Resolution |
+| --- | --- | --- | --- | --- | --- |
+
+Statuses: CANDIDATE, OPEN, FIXED, WONTFIX, REGRESSED, DROPPED.
+
+## Locked decisions
+-
+
+## Regression checks
+-
+
+## Pass log
+- $created_at: Ledger created.
+EOF
+fi
+
+cat <<EOF
+Ledger: $ledger_path
+
+Agent instructions:
+1. The ledger is history, not scope. It deduplicates findings across passes;
+   it does not limit what you review. Do a full fresh review of the current
+   diff every time — do not reduce a pass to re-checking listed findings.
+2. Read the ledger before doing review or fixes.
+3. Treat invariants and locked decisions as prior context, not absolute truth. If one seems wrong, say so and explain why before changing it.
+4. Check OPEN and REGRESSED findings before adding new ones.
+5. Reuse existing finding IDs; do not duplicate fixed findings.
+6. After the pass, update statuses, resolutions, regression checks, and pass log.
+7. If the same finding toggles OPEN/FIXED twice, mark it WONTFIX with a note and move on.
+8. Set "Last reviewed SHA" to the PR head after every pass.
+EOF
