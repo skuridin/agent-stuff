@@ -1,6 +1,6 @@
 ---
 name: pr-review-bot
-description: Unattended thermo-nuclear PR review loop. Finds pull requests in the current repo where review was requested from me, reviews each one for structural code quality, verifies findings with an independent pi subagent, and posts short plain-English review comments on GitHub. Never approves. Tracks findings across passes in a persistent ledger. Meant to run via /loop.
+description: Unattended thermo-nuclear PR review loop. Finds pull requests in the current repo where review was requested from me, reviews each one for structural code quality, verifies findings with an independent subagent when the harness offers one, and posts short plain-English review comments on GitHub. Never approves. Tracks findings across passes in a persistent ledger. Meant to run via /loop.
 ---
 
 # PR Review Bot
@@ -40,10 +40,11 @@ gh pr list --search "review-requested:@me" --json number,headRefOid,url
 
 ### 5. Independent verification
 
-- Verify with `pi` as a subagent, not with a Claude `Agent`. Follow the `pi-subagent` skill for invocation mechanics (session id, `-a`, `-p`, default model, `perl -e 'alarm 1200; exec @ARGV'` watchdog, `run_in_background`).
-- Run pi with cwd = the PR worktree. Its prompt gets: PR number, worktree path, the diff, and the CANDIDATE findings verbatim. Instruction: "Read-only task, do not edit files. For each finding, read the actual code and decide CONFIRMED or DROP with one line of reasoning. Drop anything speculative, cosmetic, already handled elsewhere in the diff, or not reproducible from the code. Output one line per finding: `<id> CONFIRMED|DROP <reason>`."
-- Read verdicts from pi's stdout. `git status` in the worktree afterwards; if pi touched anything, `git checkout -- .` before continuing.
-- If pi hangs or dies (watchdog exit 142 with no verdicts), relaunch once with the same session id. Still nothing: treat every CANDIDATE as DROPPED with reason `verification unavailable` so nothing unverified reaches GitHub.
+- Verify with an independent subagent if the harness has one (e.g. the `Agent` tool, read-only type such as `Explore` where available).
+- Run the subagent with cwd = the PR worktree. Its prompt gets: PR number, worktree path, the diff, and the CANDIDATE findings verbatim. Instruction: "Read-only task, do not edit files. For each finding, read the actual code and decide CONFIRMED or DROP with one line of reasoning. Drop anything speculative, cosmetic, already handled elsewhere in the diff, or not reproducible from the code. Output one line per finding: `<id> CONFIRMED|DROP <reason>`."
+- Read verdicts from the subagent's report. `git status` in the worktree afterwards; if it touched anything, `git checkout -- .` before continuing.
+- If the subagent fails or returns no verdicts, relaunch once. Still nothing: proceed with self-verification.
+- No subagent tool in the harness: skip this step and self-verify instead. Re-read the actual code for each CANDIDATE and apply the same CONFIRMED/DROP instruction yourself. Verification is optional; the review is not.
 - CONFIRMED → status OPEN. DROP → status DROPPED with the reason, so the next pass does not re-raise it.
 
 ### 6. Post to GitHub
@@ -67,7 +68,7 @@ Comment copy rules:
 - The "Good phrases" section below is the target voice.
 
 Disclosure (non-negotiable). Comments post under my account but are not written by me, so every review body, inline comment, and thread reply ends with this footer on its own line:
-`<sub>🤖 automated review by Claude Code (pr-review-bot), findings verified by pi. a human does the final review.</sub>`
+`<sub>🤖 automated review by Claude Code (pr-review-bot). a human does the final review.</sub>`
 Never write as if a human is speaking: no "i think", "i will", "myself". Talk about the code, not about me.
 
 ### 7. Close the pass
